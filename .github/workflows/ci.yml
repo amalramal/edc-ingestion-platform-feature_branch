@@ -40,7 +40,7 @@ jobs:
           key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --with dev
 
       - name: Ruff check
         run: poetry run ruff check src/ --output-format=github
@@ -91,7 +91,7 @@ jobs:
           key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --with dev
 
       - name: Pytest with coverage
         run: >
@@ -150,7 +150,7 @@ jobs:
           key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: poetry install --no-interaction --with dev
 
       - name: Bandit
         run: |
