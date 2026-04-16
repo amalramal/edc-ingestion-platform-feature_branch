@@ -1,0 +1,35 @@
+# =============================================================================
+# AWS Terraform variables — use a tier-specific example
+# =============================================================================
+# Templates (copy one to a real tfvars file — do not commit secrets):
+#   terraform/aws.dev.tfvars.example   → aws.dev.tfvars   (default ENV=dev)
+#   terraform/aws.uat.tfvars.example   → aws.uat.tfvars
+#   terraform/aws.prod.tfvars.example  → aws.prod.tfvars
+#
+# Legacy single file still supported: terraform/aws.tfvars
+#
+# Apply:
+#   ENV=dev|uat|prod make aws-tf-apply
+#   Picks terraform/aws.<ENV>.tfvars if it exists, else terraform/aws.tfvars
+# =============================================================================
+
+# See aws.dev.tfvars.example for the full commented template.
+
+aws_region          = "us-east-1"
+environment         = "dev"
+localstack_endpoint = ""
+s3_raw_bucket_name  = "edc-raw-layer-dev"
+s3_drop_bucket_name = "edc-drop-site-dev"
+sns_alert_topic_name = "edc-pipeline-alerts-dev"
+alert_sender_email     = "edc-alerts@yourcompany.com"
+alert_recipient_emails = ["ops@yourcompany.com"]
+ecs_cluster_name    = "edc-ingestion-cluster-dev"
+ecs_task_cpu        = "512"
+ecs_task_memory     = "1024"
+api_desired_count   = 2
+api_min_count       = 1
+api_max_count       = 10
+api_cpu_target      = 60
+api_memory_target   = 70
+api_scale_in_cooldown  = 300
+api_scale_out_cooldown = 60

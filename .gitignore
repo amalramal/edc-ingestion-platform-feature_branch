@@ -1,0 +1,90 @@
+# =============================================================================
+# EDC Ingestion Platform — Git ignore (clone-friendly; no secrets in repo)
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-wheel-metadata/
+.pytype/
+cython_debug/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# --- Tooling ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# --- IDE / editors ---
+.vscode/
+.idea/
+*.swp
+*~
+.project
+.pydevproject
+.settings/
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+crash.*.log
+terraform/*.tfvars
+!terraform/*.tfvars.example
+
+# --- Environment & secrets (templates with *.example stay tracked) ---
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example
+!.env.*.example
+
+# --- Docker / local data ---
+localstack_data/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Misc ---
+*.log
+*.tmp
+.cache/

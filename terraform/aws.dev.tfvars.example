@@ -1,0 +1,59 @@
+# =============================================================================
+# EDC Ingestion Platform — AWS DEV tier (example tfvars)
+# =============================================================================
+# Copy to aws.dev.tfvars (or use terraform/aws.tfvars for legacy single file):
+#   cp terraform/aws.dev.tfvars.example terraform/aws.dev.tfvars
+#
+# Deploy:
+#   make aws-push && make aws-tf-apply
+#   (default ENV=dev selects this file when aws.dev.tfvars exists)
+# =============================================================================
+
+aws_region          = "us-east-1"
+environment         = "dev"
+
+localstack_endpoint = ""
+# aws_endpoint_url      = "http://localhost:4566"
+# aws_access_key_id     = "test"
+# aws_secret_access_key = "test"
+
+s3_raw_bucket_name  = "edc-raw-layer-dev"
+s3_drop_bucket_name = "edc-drop-site-dev"
+
+sns_alert_topic_name = "edc-pipeline-alerts-dev"
+
+# database_url = "postgresql://user:pass@your-rds-endpoint:5432/edc_platform"
+
+# edc_subject_visit_api_base_url = "https://edc.example.com/api"
+# edc_oauth2_token_url           = "https://edc.example.com/oauth/token"
+# edc_oauth2_client_id           = "..."
+# edc_oauth2_client_secret       = "..."
+
+# edc_subject_visit_source_mode = "SFTP_ONLY"
+# edc_pipeline_depth            = "PUBLISH"
+
+# default_sponsor_id = "demo"
+# alert_recipients   = "oncall@yourcompany.com"
+
+# dask_logging_distributed = "WARNING"
+
+alert_sender_email     = "edc-alerts@yourcompany.com"
+alert_recipient_emails = ["ops-lead@yourcompany.com", "clinical-ops@yourcompany.com"]
+
+ecs_cluster_name = "edc-ingestion-cluster-dev"
+ecs_task_cpu     = "512"
+ecs_task_memory  = "1024"
+
+# ecs_fargate_subnet_ids = ["subnet-aaaaaaaa", "subnet-bbbbbbbb"]
+
+api_desired_count      = 2
+api_min_count          = 1
+api_max_count          = 10
+api_cpu_target         = 60
+api_memory_target      = 70
+api_scale_in_cooldown  = 300
+api_scale_out_cooldown = 60
+
+# worker_image      = "123456789012.dkr.ecr.us-east-1.amazonaws.com/edc-ingestion-platform:latest"
+# publisher_image   = "123456789012.dkr.ecr.us-east-1.amazonaws.com/edc-ingestion-platform:latest"
+# api_image         = "123456789012.dkr.ecr.us-east-1.amazonaws.com/edc-ingestion-platform:latest"

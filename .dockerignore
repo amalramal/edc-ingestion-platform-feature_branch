@@ -1,0 +1,72 @@
+# =============================================================================
+# Docker build context — keep image builds fast and deterministic.
+# The production Dockerfile only COPYs: pyproject.toml, poetry.lock*, alembic*, src/
+# Everything else here shrinks context and avoids leaking local state.
+# =============================================================================
+
+# VCS & CI
+.git
+.github
+
+# Python / tooling (not copied into runtime image)
+__pycache__
+*.py[cod]
+*$py.class
+*.egg-info
+.eggs
+dist
+build
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.tox
+.nox
+htmlcov
+.coverage
+coverage.xml
+.hypothesis
+
+# Virtualenvs (never send to daemon)
+.venv
+venv
+ENV
+
+# Secrets & local env (never bake into layers)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Terraform / infra (not in Dockerfile)
+.terraform
+*.tfstate*
+terraform
+
+# Tests & dev-only (image runs app + alembic only)
+tests
+
+# Sample / example assets (not COPY’d by Dockerfile)
+examples
+input_files
+openapi_spec.json
+
+# Compose & local orchestration (not needed in `docker build`)
+docker-compose*.yml
+Makefile
+make.bat
+
+# Docs & metadata not required at runtime
+*.md
+!README.md
+
+# Scripts (not COPY’d by current Dockerfile)
+scripts
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# LocalStack persistence
+localstack_data

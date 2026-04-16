@@ -1,0 +1,35 @@
+# =============================================================================
+# EDC Ingestion Platform — AWS PROD tier (example tfvars)
+# =============================================================================
+#   cp terraform/aws.prod.tfvars.example terraform/aws.prod.tfvars
+#   make aws-push && ENV=prod make aws-tf-apply
+# =============================================================================
+
+aws_region          = "us-east-1"
+environment         = "prod"
+
+localstack_endpoint = ""
+
+s3_raw_bucket_name  = "edc-raw-layer-prod"
+s3_drop_bucket_name = "edc-drop-site-prod"
+
+sns_alert_topic_name = "edc-pipeline-alerts-prod"
+
+# database_url = "postgresql://user:pass@your-rds-prod:5432/edc_platform"
+
+alert_sender_email     = "edc-alerts@yourcompany.com"
+alert_recipient_emails = ["oncall@yourcompany.com", "clinical-ops@yourcompany.com"]
+
+ecs_cluster_name = "edc-ingestion-cluster-prod"
+ecs_task_cpu     = "1024"
+ecs_task_memory  = "2048"
+
+# ecs_fargate_subnet_ids = ["subnet-prod-a", "subnet-prod-b"]
+
+api_desired_count      = 2
+api_min_count          = 2
+api_max_count          = 20
+api_cpu_target         = 55
+api_memory_target      = 75
+api_scale_in_cooldown  = 600
+api_scale_out_cooldown = 120

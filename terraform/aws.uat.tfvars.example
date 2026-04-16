@@ -1,0 +1,35 @@
+# =============================================================================
+# EDC Ingestion Platform — AWS UAT tier (example tfvars)
+# =============================================================================
+#   cp terraform/aws.uat.tfvars.example terraform/aws.uat.tfvars
+#   make aws-push && ENV=uat make aws-tf-apply
+# =============================================================================
+
+aws_region          = "us-east-1"
+environment         = "uat"
+
+localstack_endpoint = ""
+
+s3_raw_bucket_name  = "edc-raw-layer-uat"
+s3_drop_bucket_name = "edc-drop-site-uat"
+
+sns_alert_topic_name = "edc-pipeline-alerts-uat"
+
+# database_url = "postgresql://user:pass@your-rds-uat:5432/edc_platform"
+
+alert_sender_email     = "edc-alerts-uat@yourcompany.com"
+alert_recipient_emails = ["ops-uat@yourcompany.com"]
+
+ecs_cluster_name = "edc-ingestion-cluster-uat"
+ecs_task_cpu     = "512"
+ecs_task_memory  = "1024"
+
+# ecs_fargate_subnet_ids = ["subnet-aaaaaaaa", "subnet-bbbbbbbb"]
+
+api_desired_count      = 2
+api_min_count          = 1
+api_max_count          = 8
+api_cpu_target         = 60
+api_memory_target      = 70
+api_scale_in_cooldown  = 300
+api_scale_out_cooldown = 60

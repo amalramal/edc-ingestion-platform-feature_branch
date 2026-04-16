@@ -1,0 +1,291 @@
+# =============================================================================
+# EDC Ingestion Platform — Local Development Orchestration
+# =============================================================================
+# Local modes (``EDC_ENVIRONMENT`` + ``LOCAL_RUNTIME_MODE`` in config.py):
+#   • local-compose + compose (default) — POST /ingest runs worker+publisher in-process; S3/SNS via LocalStack.
+#   • local-localstack + localstack_full — Merge ``docker-compose.localstack-full.yml``; POST /ingest starts
+#     Step Functions (``make localstack-full-print-env`` for SFN_STATE_MACHINE_ARN).
+#
+# Topology:
+#   1. postgres_db      — Postgres 18.2 with health-checked readiness.
+#   2. localstack       — AWS emulator (LocalStack 4.14.x) on port 4566.
+#   3. localstack_init  — One-shot: S3, SNS, SES identities, STS check, samples.
+#   4. sftpgo           — Local SFTP (SFTPGo 2.7.x-slim); Web admin :8080, SFTP :2022. Volumes match
+#                         the common compose pattern (``/srv/sftpgo`` + ``/var/lib/sftpgo``); see
+#                         https://awesome-docker-compose.com/sftpgo
+#   5. alembic_migrator — Runs schema migrations for sponsor_demo.
+#   6. fastapi_trigger  — The API surface on port 8000.
+#
+# SFTP test data: ``docker compose --profile bootstrap run --rm sftpgo_bootstrap`` copies
+# ``input_files/by_study/<studyId>/`` under ``SFTPGO_LANDING_PREFIX`` on the SFTPGo volume (user ``edc``),
+# matching ``SFTPIngestor``. ``S3_SFTP_LANDING_PREFIX`` is the raw-bucket landing zone (sample CSV + ingestion Parquet).
+#
+# LocalStack SERVICES align with runtime + Terraform (local `make tf-apply`):
+#   • App code (boto3):     S3, SNS
+#   • Alert chain:          SNS → Lambda → SES (after Terraform provisions Lambda)
+#   • Orchestration:        Step Functions (+ IAM roles in TF)
+#   • Container platform:     ECS, CloudWatch Logs, IAM (TF)
+#   • Supporting:           STS, SQS (subscriptions), Events, EC2 (ECS deps)
+#
+# Mount Docker socket so LocalStack Lambda (v2 provider) can run functions in containers.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Postgres 18.2
+  # ---------------------------------------------------------------------------
+  postgres_db:
+    image: postgres:18.2-alpine
+    container_name: edc_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edc_user -d edc_platform"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # LocalStack 4.14 — full local AWS surface used by this project
+  # ---------------------------------------------------------------------------
+  localstack:
+    image: localstack/localstack:4.14.0
+    container_name: edc_localstack
+    environment:
+      # Comma-separated: match app + Terraform resources (see header comment).
+      # Note: Application Auto Scaling in Terraform may be partially emulated; use real AWS for full AS tests.
+      SERVICES: >-
+        s3,sns,sqs,ses,lambda,stepfunctions,iam,logs,sts,ecs,events,cloudwatch,ec2
+      GATEWAY_LISTEN: "0.0.0.0:4566"
+      LS_LOG: warning
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:4566/_localstack/health | grep -qE 's3|\"s3\"'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # LocalStack Bootstrapper — buckets, SNS, SES test identities, pipeline keys
+  # ---------------------------------------------------------------------------
+  localstack_init:
+    image: amazon/aws-cli:2.22.14
+    container_name: edc_localstack_init
+    depends_on:
+      localstack:
+        condition: service_healthy
+    # Repo-root input_files/ (same tree as tests/conftest SAMPLES_DIR). Optional: without this mount,
+    # the script falls back to a tiny inline CSV so compose still starts.
+    volumes:
+      - "./input_files:/edc-samples:ro"
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+      S3_RAW_BUCKET: ${S3_RAW_BUCKET:-edc-raw-layer}
+      S3_SFTP_LANDING_PREFIX: ${S3_SFTP_LANDING_PREFIX:-sftp-landing/}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -e
+        EP="--endpoint-url=http://localstack:4566"
+
+        echo ">>> STS (verify LocalStack identity)..."
+        aws $$EP sts get-caller-identity
+
+        echo ">>> Creating S3 buckets..."
+        aws $$EP s3 mb s3://edc-raw-layer 2>/dev/null || true
+        aws $$EP s3 mb s3://edc-drop-site 2>/dev/null || true
+
+        echo ">>> S3 pipeline prefixes (Parquet handoff + Step Functions manifests)..."
+        printf '{}' | aws $$EP s3 cp - s3://edc-raw-layer/pipeline-staging/.localstack-ready
+        printf '{}' | aws $$EP s3 cp - s3://edc-raw-layer/pipeline-state/.localstack-ready
+
+        echo ">>> Creating SNS topic..."
+        aws $$EP sns create-topic --name edc-pipeline-alerts 2>/dev/null || true
+
+        echo ">>> SES — verify test identities (LocalStack; no real email)..."
+        aws $$EP ses verify-email-identity --email-address edc-alerts-sender@example.local 2>/dev/null || true
+        aws $$EP ses verify-email-identity --email-address ops@example.local 2>/dev/null || true
+
+        echo ">>> Uploading sample subject-visit CSV (prefer input_files from repo)..."
+        SAMPLE="/edc-samples/by_study/B1791094/subjectvisit_B1791094_29Oct2025.csv"
+        S3_PFX=$$(echo "$$S3_SFTP_LANDING_PREFIX" | sed 's|^/*||;s|/*$$||')
+        DEST="s3://$$S3_RAW_BUCKET/$$S3_PFX/B1791094/subjectvisit_B1791094_sample.csv"
+        if [ -f "$$SAMPLE" ]; then
+          echo "Using: $$SAMPLE"
+          aws $$EP s3 cp "$$SAMPLE" "$$DEST"
+        else
+          echo "WARN: input_files not mounted — add repo-root input_files/ or use minimal stub."
+          cat > /tmp/subjectvisit_sample.csv << 'CSVEOF'
+        STUDY_ID|STUDY_SITE|VISIT_NUMBER|VISIT_NAME|FORM_NAME|BLANK_FORM_INDICATOR|FORM_NOTDONE_INDICATOR|VISIT_DATE|DATA_ENTRY_DATE|PROCEDURE_NAME|PROCEDURE_STATUS|SUBEVENT_NUMBER|SUBJECT_ID|SUBJECT_STATUS|ERRONEOUS|VISIT_CONTACT_MODE|SUBJECT_GROUP_IDENTIFIER|START_DATETIME|TIME_POST_DOSE|STUDY_FSFV|COHORT|STRATA|PAYMENT_GROUP
+        B1791094|1004|3|Screening|DATE OF VISIT|1|0|11-JUL-2022|15-JUL-2022|SV001|COMPLETE|1|10041001|COMPLETED|0|||||||
+        B1791094|1004|3|Screening|DEMOGRAPHY|1|0|11-JUL-2022|15-JUL-2022|DM001|COMPLETE|1|10041001|COMPLETED|0|||||||
+        CSVEOF
+          sed -i 's/^        //' /tmp/subjectvisit_sample.csv
+          aws $$EP s3 cp /tmp/subjectvisit_sample.csv "$$DEST"
+        fi
+
+        echo ">>> Smoke checks..."
+        aws $$EP s3 ls
+        aws $$EP sns list-topics
+
+        echo ">>> LocalStack bootstrap complete."
+        echo ">>> Next: optional Terraform — make tf-init && make tf-apply (Lambda + Step Functions + ECS)."
+
+  # ---------------------------------------------------------------------------
+  # SFTPGo — local SFTP + Web admin (pattern: Awesome Docker Compose SFTPGo)
+  # ---------------------------------------------------------------------------
+  sftpgo:
+    image: drakkan/sftpgo:2.7.x-slim
+    container_name: edc_sftpgo
+    ports:
+      - "8080:8080"
+      - "2022:2022"
+    environment:
+      # First-boot admin (https://awesome-docker-compose.com/sftpgo). SFTPGo also requires
+      # ``create_default_admin`` when the data provider has no admins yet.
+      SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN: "true"
+      SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_DEFAULT_ADMIN_USERNAME}
+      SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_DEFAULT_ADMIN_PASSWORD}
+      SFTPGO_LOADDATA_FROM: /etc/sftpgo/loaddata.json
+      SFTPGO_LOADDATA_MODE: "1"
+    volumes:
+      - sftpgo_srv:/srv/sftpgo
+      - sftpgo_lib:/var/lib/sftpgo
+      - ./docker/sftpgo/loaddata.json:/etc/sftpgo/loaddata.json:ro
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # SFTPGo — one-shot copy of ``input_files/by_study`` into the SFTP user tree
+  # ---------------------------------------------------------------------------
+  sftpgo_bootstrap:
+    profiles: ["bootstrap"]
+    image: alpine:3.21
+    volumes:
+      - ./input_files/by_study:/src:ro
+      - sftpgo_srv:/srv/sftpgo
+    environment:
+      LANDING_PREFIX: ${SFTPGO_LANDING_PREFIX:-input-files/}
+      SFTPGO_LINUX_USER: edc
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        set -e
+        PFX=$$(echo "$$LANDING_PREFIX" | sed 's|^/*||;s|/*$$||')
+        HOME_DIR="/srv/sftpgo/data/$$SFTPGO_LINUX_USER"
+        DEST_ROOT="$$HOME_DIR/$$PFX"
+        mkdir -p "$$HOME_DIR"
+        for d in /src/*/; do
+          [ -d "$$d" ] || continue
+          study=$$(basename "$$d")
+          mkdir -p "$$DEST_ROOT/$$study"
+          cp -a "$$d." "$$DEST_ROOT/$$study/"
+        done
+        chown -R 1000:1000 "$$HOME_DIR" 2>/dev/null || true
+        echo "SFTPGo bootstrap: study files -> $$DEST_ROOT/<studyId>/"
+
+  # ---------------------------------------------------------------------------
+  # Alembic Migrator — Schema creation + seed rules
+  # ---------------------------------------------------------------------------
+  alembic_migrator:
+    build: .
+    container_name: edc_alembic_migrator
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      ONBOARD_SPONSORS: ${ONBOARD_SPONSORS:-sponsor_demo}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -e
+        for schema in $$ONBOARD_SPONSORS; do
+          echo ">>> Migrating schema: $$schema"
+          alembic -x schema=$$schema upgrade head
+        done
+        echo ">>> All sponsor schemas migrated."
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Trigger — The API surface
+  # ---------------------------------------------------------------------------
+  fastapi_trigger:
+    build: .
+    container_name: edc_fastapi
+    depends_on:
+      alembic_migrator:
+        condition: service_completed_successfully
+      localstack_init:
+        condition: service_completed_successfully
+      sftpgo:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-edc_user}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB:-edc_platform}
+      EDC_ENVIRONMENT: ${EDC_ENVIRONMENT:-local-compose}
+      LOCAL_RUNTIME_MODE: ${LOCAL_RUNTIME_MODE:-compose}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-http://localstack:4566}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      S3_RAW_BUCKET: ${S3_RAW_BUCKET:-edc-raw-layer}
+      S3_DROP_BUCKET: ${S3_DROP_BUCKET:-edc-drop-site}
+      S3_SFTP_LANDING_PREFIX: ${S3_SFTP_LANDING_PREFIX:-sftp-landing/}
+      SFTPGO_LANDING_PREFIX: ${SFTPGO_LANDING_PREFIX:-input-files/}
+      S3_PARTIAL_API_STASH_PREFIX: ${S3_PARTIAL_API_STASH_PREFIX:-partial-api-pulls/}
+      S3_PIPELINE_STAGING_PREFIX: ${S3_PIPELINE_STAGING_PREFIX:-pipeline-staging/}
+      S3_PIPELINE_STATE_PREFIX: ${S3_PIPELINE_STATE_PREFIX:-pipeline-state/}
+      SNS_ALERT_TOPIC_ARN: ${SNS_ALERT_TOPIC_ARN:-arn:aws:sns:us-east-1:000000000000:edc-pipeline-alerts}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-10}
+      EDC_SPONSOR_SCHEMA: ${EDC_SPONSOR_SCHEMA:-sponsor_demo}
+      EDC_SUBJECT_VISIT_API_BASE_URL: ${EDC_SUBJECT_VISIT_API_BASE_URL:-}
+      EDC_SUBJECT_VISIT_PAGE_SIZE: ${EDC_SUBJECT_VISIT_PAGE_SIZE:-500}
+      EDC_SUBJECT_VISIT_SOURCE_MODE: ${EDC_SUBJECT_VISIT_SOURCE_MODE:-}
+      EDC_PIPELINE_DEPTH: ${EDC_PIPELINE_DEPTH:-PUBLISH}
+      EDC_OAUTH2_TOKEN_URL: ${EDC_OAUTH2_TOKEN_URL:-}
+      EDC_OAUTH2_CLIENT_ID: ${EDC_OAUTH2_CLIENT_ID:-}
+      EDC_OAUTH2_CLIENT_SECRET: ${EDC_OAUTH2_CLIENT_SECRET:-}
+      EDC_OAUTH2_TIMEOUT_SECONDS: ${EDC_OAUTH2_TIMEOUT_SECONDS:-120}
+      EDC_API_TIMEOUT_SECONDS: ${EDC_API_TIMEOUT_SECONDS:-300}
+      EDC_CIRCUIT_FAILURE_THRESHOLD: ${EDC_CIRCUIT_FAILURE_THRESHOLD:-5}
+      EDC_CIRCUIT_RECOVERY_SECONDS: ${EDC_CIRCUIT_RECOVERY_SECONDS:-60}
+      SFTP_HOST: ${SFTP_HOST:-}
+      SFTP_PORT: ${SFTP_PORT:-22}
+      SFTP_USER: ${SFTP_USER:-}
+      SFTP_PASSWORD: ${SFTP_PASSWORD:-}
+      SFTP_PRIVATE_KEY_PATH: ${SFTP_PRIVATE_KEY_PATH:-}
+      SFTP_PRIVATE_KEY_PASSPHRASE: ${SFTP_PRIVATE_KEY_PASSPHRASE:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-}
+      DASK_LOGGING__DISTRIBUTED: ${DASK_LOGGING__DISTRIBUTED:-WARNING}
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "edc_ingestion.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  localstack_data:
+  sftpgo_srv:
+  sftpgo_lib:

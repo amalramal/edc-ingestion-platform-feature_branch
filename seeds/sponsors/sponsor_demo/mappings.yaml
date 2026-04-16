@@ -1,0 +1,231 @@
+eligibility_rule:
+  - ruleId: ELIG-001
+    studyId: null
+    columnName: procedureStatus
+    operator: EQUALS
+    expectedValue: COMPLETE
+    rejectionReason: "procedureStatus must be 'COMPLETE' to generate payment."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+  - ruleId: ELIG-002
+    studyId: null
+    columnName: blankFormIndicator
+    operator: EQUALS
+    expectedValue: "1"
+    rejectionReason: "blankFormIndicator must be '1' to generate payment."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+  - ruleId: ELIG-003
+    studyId: null
+    columnName: formNotDoneIndicator
+    operator: EQUALS
+    expectedValue: "0"
+    rejectionReason: "formNotDoneIndicator must be '0' to generate payment."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+  - ruleId: ELIG-004
+    studyId: null
+    columnName: subjectVisitDate
+    operator: IS_NOT_NULL
+    expectedValue: null
+    rejectionReason: "subjectVisitDate cannot be blank/null to generate payment."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+  - ruleId: ELIG-005
+    studyId: null
+    columnName: subjectStatus
+    operator: IS_NOT_NULL
+    expectedValue: null
+    rejectionReason: "subjectStatus cannot be blank/null; unpayable without status."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+  - ruleId: ELIG-006
+    studyId: null
+    columnName: erroneous
+    operator: NOT_EQUALS
+    expectedValue: "1"
+    rejectionReason: "Erroneous visit — row marked as erroneous and cannot be paid."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+  - ruleId: ELIG-007
+    studyId: null
+    columnName: subjectId
+    operator: IS_NOT_NULL
+    expectedValue: null
+    rejectionReason: "subjectId is required for every EDC row."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+  - ruleId: ELIG-008
+    studyId: null
+    columnName: studySiteNumber
+    operator: IS_NOT_NULL
+    expectedValue: null
+    rejectionReason: "studySiteNumber is required for every EDC row."
+    ruleKind: NON_BLOCKING
+    isActive: true
+    createdBy: system
+
+subject_visit_column_mapping:
+  - sourceColumn: STUDY_ID
+    targetColumn: studyId
+    description: Study identifier
+    createdBy: system
+  - sourceColumn: STUDY_SITE
+    targetColumn: studySiteNumber
+    description: Clinical site number
+    createdBy: system
+  - sourceColumn: SUBJECT_ID
+    targetColumn: subjectId
+    description: Subject identifier
+    createdBy: system
+  - sourceColumn: SUBJECT_STATUS
+    targetColumn: subjectStatus
+    description: Subject enrollment status
+    createdBy: system
+  - sourceColumn: VISIT_NUMBER
+    targetColumn: subjectVisitNumber
+    description: Protocol visit number
+    createdBy: system
+  - sourceColumn: VISIT_NAME
+    targetColumn: subjectVisitName
+    description: Protocol visit name
+    createdBy: system
+  - sourceColumn: VISIT_DATE
+    targetColumn: subjectVisitDate
+    description: Date of visit
+    createdBy: system
+  - sourceColumn: STUDY_FSFV
+    targetColumn: study_fsfv
+    description: First subject first visit date
+    createdBy: system
+  - sourceColumn: FORM_NAME
+    targetColumn: formName
+    description: CRF form name
+    createdBy: system
+  - sourceColumn: BLANK_FORM_INDICATOR
+    targetColumn: blankFormIndicator
+    description: "1 = form has data"
+    createdBy: system
+  - sourceColumn: COHORT
+    targetColumn: cohort
+    description: Subject cohort
+    createdBy: system
+  - sourceColumn: STRATA
+    targetColumn: strata
+    description: Subject strata assignment
+    createdBy: system
+  - sourceColumn: FORM_NOTDONE_INDICATOR
+    targetColumn: formNotDoneIndicator
+    description: "0 = form completed"
+    createdBy: system
+  - sourceColumn: DATA_ENTRY_DATE
+    targetColumn: dateEntryDate
+    description: Data entry date
+    createdBy: system
+  - sourceColumn: PROCEDURE_NAME
+    targetColumn: procedureName
+    description: Protocol procedure code
+    createdBy: system
+  - sourceColumn: PROCEDURE_STATUS
+    targetColumn: procedureStatus
+    description: Procedure completion status
+    createdBy: system
+  - sourceColumn: SUBEVENT_NUMBER
+    targetColumn: subEventNumber
+    description: Subevent sequence number
+    createdBy: system
+  - sourceColumn: ERRONEOUS
+    targetColumn: erroneous
+    description: Erroneous visit flag
+    createdBy: system
+  - sourceColumn: VISIT_CONTACT_MODE
+    targetColumn: visitContactMode
+    description: Visit contact mode
+    createdBy: system
+  - sourceColumn: SUBJECT_GROUP_IDENTIFIER
+    targetColumn: subjectGroupIdentifier
+    description: Subject group identifier
+    createdBy: system
+  - sourceColumn: START_DATETIME
+    targetColumn: startDateTime
+    description: PK/procedure start datetime
+    createdBy: system
+  - sourceColumn: TIME_POST_DOSE
+    targetColumn: timePostDose
+    description: Time post dose
+    createdBy: system
+  - sourceColumn: PAYMENT_GROUP
+    targetColumn: paymentGroup
+    description: Payment group assignment
+    createdBy: system
+
+subject_group_column_mapping:
+  - sourceColumn: SUBJECT_ID
+    targetColumn: subjectId
+    description: "Impala subjectgrp: subject key"
+    createdBy: system
+  - sourceColumn: STUDY_ID
+    targetColumn: studyId
+    description: "Impala subjectgrp: study"
+    createdBy: system
+  - sourceColumn: SBJ_STR_STRATA_NUM
+    targetColumn: strata
+    description: "Default Impala strata column (see studyConfig.impalaArmColumn)"
+    createdBy: system
+  - sourceColumn: SBJ_COH_COHORT_NUM
+    targetColumn: cohort
+    description: Impala cohort column
+    createdBy: system
+  - sourceColumn: SITE_ID
+    targetColumn: studySiteNumber
+    description: Impala site identifier
+    createdBy: system
+  - sourceColumn: STUDY_SITE_ID
+    targetColumn: studySiteNumber
+    description: Alternate site column in subjectgrp
+    createdBy: system
+  - sourceColumn: SBJ_SITE_NUM
+    targetColumn: studySiteNumber
+    description: Alternate site column naming
+    createdBy: system
+  - sourceColumn: SUBJECT_GROUP
+    targetColumn: subjectGroupIdentifier
+    description: Subject group / arm code in subjectgrp
+    createdBy: system
+  - sourceColumn: PAYMENT_GROUP
+    targetColumn: paymentGroup
+    description: Payment group in Impala extract
+    createdBy: system
+
+misc_column_mapping:
+  - sourceColumn: SUBJ_ID
+    targetColumn: subjectId
+    description: Legacy short subject id column
+    createdBy: system
+  - sourceColumn: SITE
+    targetColumn: studySiteNumber
+    description: Short site column
+    createdBy: system
+  - sourceColumn: VISIT_DT
+    targetColumn: subjectVisitDate
+    description: Alternate visit date header
+    createdBy: system
+  - sourceColumn: FORM
+    targetColumn: formName
+    description: Short form name column
+    createdBy: system
+  - sourceColumn: PROC_STATUS
+    targetColumn: procedureStatus
+    description: Short procedure status
+    createdBy: system
+  - sourceColumn: SUBJ_STATUS
+    targetColumn: subjectStatus
+    description: Alternate subject status
+    createdBy: system

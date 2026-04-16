@@ -1,0 +1,12 @@
+# Normalize line endings across Windows / macOS / Linux clones.
+* text=auto
+
+# Windows batch files
+*.bat text eol=crlf
+
+# Shell & POSIX tooling (Docker/Linux, CI)
+*.sh text eol=lf
+
+# Poetry / lockfiles — explicit UTF-8
+pyproject.toml text
+poetry.lock text

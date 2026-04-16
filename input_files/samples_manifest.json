@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "layout": "by_study",
+  "description": "Sample EDC extracts keyed by protocol / study id. Paths are relative to this folder.",
+  "studies": {
+    "B1791094": {
+      "description": "Mode 0 — flat rate (same pay for all groups)",
+      "arm_resolution_mode": "FLAT_RATE",
+      "files": {
+        "subjectvisit": "by_study/B1791094/subjectvisit_B1791094_29Oct2025.csv",
+        "subjectgrp": "by_study/B1791094/subjectgrp_B1791094_29Oct2025.csv"
+      }
+    },
+    "C5851005": {
+      "description": "Mode 1 — EDC-only; budget arm from EDC payment-group columns",
+      "arm_resolution_mode": "EDC_ONLY",
+      "files": {
+        "subjectvisit": "by_study/C5851005/subjectvisit_C5851005_06Nov2025.csv"
+      }
+    },
+    "C1071006": {
+      "description": "IMPALA_GROUP_MAP_TO_ARM — Impala subjectgrp (cohort or strata column) + strata_to_arm_mapping",
+      "arm_resolution_mode": "IMPALA_GROUP_MAP_TO_ARM",
+      "files": {
+        "subjectvisit": "by_study/C1071006/subjectvisit_UAT_RCC_C1071006_01Aug2025.csv",
+        "subjectgrp": "by_study/C1071006/subjectgrp_C1071006_06Nov2025.csv",
+        "visitschedule": "by_study/C1071006/visitschedule_C1071006_06Nov2025.csv"
+      }
+    },
+    "C1071032": {
+      "description": "Mode 4 — manual mapping template + EDC extracts",
+      "arm_resolution_mode": "MANUAL_MAPPING",
+      "files": {
+        "subjectvisit": "by_study/C1071032/subjectvisit_C1071032_29Oct2025.csv",
+        "subjectgrp": "by_study/C1071032/subjectgrp_C1071032_29Oct2025.csv",
+        "manual_template": "by_study/C1071032/C1071032_manual_subjectgroup_template_22Oct2025.csv"
+      }
+    },
+    "C4891026": {
+      "description": "IMPALA_BUDGET_ARM_FROM_COLUMN — Impala subjectgrp column is the budget arm",
+      "arm_resolution_mode": "IMPALA_BUDGET_ARM_FROM_COLUMN",
+      "files": {
+        "subjectvisit": "by_study/C4891026/subjectvisit_C4891026_06Nov2025.csv",
+        "subjectgrp": "by_study/C4891026/subjectgrp_C4891026_06Nov2025.csv",
+        "visitschedule": "by_study/C4891026/visitschedule_C4891026_06Nov2025.csv"
+      }
+    },
+    "C1071005": {
+      "description": "Mode 6 — hybrid: Impala subjectgrp + manual template",
+      "arm_resolution_mode": "HYBRID",
+      "files": {
+        "subjectgrp_impala": "by_study/C1071005/subjectgrp_C1071005_06Nov2025_impala.csv",
+        "manual_template": "by_study/C1071005/C1071005_manual_subjectgroup_template_02Nov2025.csv"
+      }
+    },
+    "C5751002": {
+      "description": "Additional protocol — subject visit + visit schedule extracts",
+      "arm_resolution_mode": "EDC_ONLY",
+      "files": {
+        "subjectvisit": "by_study/C5751002/subjectvisit_C5751002_28Apr2025.csv",
+        "visitschedule": "by_study/C5751002/visitschedule_C5751002_28Apr2025.csv"
+      }
+    }
+  }
+}

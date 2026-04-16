@@ -1,0 +1,33 @@
+# =============================================================================
+# Terraform — LocalStack (local.tfvars)
+# =============================================================================
+# cp terraform/local.tfvars.example terraform/local.tfvars
+# make up && make tf-apply   # uses local.tfvars automatically when file exists
+#
+# Uses default localstack_endpoint (localhost:4566). ECS tasks get EDC_ENVIRONMENT=local-localstack.
+# placeholders suit LocalStack; override for real AWS VPCs.
+# =============================================================================
+
+aws_region          = "us-east-1"
+environment         = "dev"
+localstack_endpoint = "http://localhost:4566"
+
+# Buckets + SNS topic are created by docker-compose localstack_init; Terraform attaches versioning/encryption.
+assume_compose_bootstrapped_s3_sns = true
+
+# LocalStack Community often cannot create ECS (licensed). Skip ECS/SFN/API-on-ECS; use default `make up` for the pipeline.
+# Set false only with LocalStack Pro (or real AWS) if you need Step Functions + ECS from Terraform.
+localstack_skip_ecs_and_sfn = true
+
+s3_raw_bucket_name  = "edc-raw-layer"
+s3_drop_bucket_name = "edc-drop-site"
+
+# LocalStack ECS RunTask / ECS service awsvpc — adjust if your LocalStack version expects different IDs
+ecs_fargate_subnet_ids = ["subnet-00000000000000001"]
+
+sns_alert_topic_name = "edc-pipeline-alerts"
+
+database_url = "postgresql://edc_user:edc_pass@host.docker.internal:5432/edc_platform"
+
+aws_access_key_id     = "test"
+aws_secret_access_key = "test"

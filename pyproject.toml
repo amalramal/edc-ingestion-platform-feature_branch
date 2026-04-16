@@ -1,0 +1,86 @@
+[tool.poetry]
+name = "edc-ingestion-platform"
+version = "0.3.0"
+description = "GxP-compliant Clinical Data (EDC) Ingestion Pipeline — 2-step ETL on AWS Step Functions / ECS Fargate."
+authors = ["EDC Platform Team"]
+readme = "README.md"
+packages = [{ include = "edc_ingestion", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+
+# Core ORM & Database
+sqlmodel = "0.0.37"
+sqlalchemy = "2.0.46"
+psycopg2-binary = "2.9.11"
+alembic = "1.18.4"
+
+# Data Engine (modin 0.37.1 requires pandas >=2.2,<2.4)
+# Use dask backend — ray has no Python 3.13 Windows wheels.
+modin = { version = "0.37.1", extras = ["dask"] }
+pandas = "2.3.3"
+pyarrow = ">=16,<22"
+
+# Cloud SDK
+boto3 = "1.42.54"
+# fsspec S3 backend for Modin read_parquet(s3://...) without buffering the whole object in the driver
+s3fs = ">=2024.2.0"
+
+# HTTP Client (subject-visit + milestone REST APIs)
+httpx = ">=0.27,<1.0"
+
+# API Framework
+fastapi = "0.135.1"
+uvicorn = "0.41.0"
+anyio = "^4.12.1"
+pydantic = "2.12.5"
+pydantic-settings = "2.13.1"
+
+# Utilities
+python-dotenv = "1.2.1"
+structlog = "25.5.0"
+pyyaml = "^6.0.3"
+paramiko = "^4.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0"
+pytest-cov = "^7.0"
+ruff = "^0.15"
+mypy = "^1.19"
+
+[tool.poetry.scripts]
+edc-task = "edc_ingestion.router:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# =============================================================================
+# Tool Configuration
+# =============================================================================
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# StrEnum-style SQLModel/API enums; FastAPI ``Query`` defaults.
+"src/edc_ingestion/models.py" = ["UP042"]
+"src/edc_ingestion/app.py" = ["B008"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+# boto3/modin/pandas/paramiko ship without usable typing for our usage; first-party code stays strict.
+disable_error_code = ["import-untyped"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Optional integration tests can live under tests/integration/ (excluded from default collect).
+norecursedirs = ["integration"]
+addopts = "-v --tb=short"

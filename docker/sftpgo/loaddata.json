@@ -1,0 +1,17 @@
+{
+  "version": 17,
+  "users": [
+    {
+      "username": "edc",
+      "password": "edc",
+      "status": 1,
+      "home_dir": "/srv/sftpgo/data/edc",
+      "filesystem": {
+        "provider": 0
+      },
+      "permissions": {
+        "/": ["*"]
+      }
+    }
+  ]
+}

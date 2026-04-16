@@ -1,0 +1,18 @@
+# =============================================================================
+# Override: localstack_full runtime mode
+# =============================================================================
+# Use with: docker compose -f docker-compose.yml -f docker-compose.localstack-full.yml up -d
+# Or:       make localstack-full-up
+#
+# Requires SFN_STATE_MACHINE_ARN after Terraform apply (see Makefile
+# ``localstack-full-print-env`` or scripts/localstack_full_export.*).
+# POST /ingest/{study_id} then returns 202 and starts Step Functions instead of
+# running the worker in-process.
+# =============================================================================
+
+services:
+  fastapi_trigger:
+    environment:
+      EDC_ENVIRONMENT: local-localstack
+      LOCAL_RUNTIME_MODE: localstack_full
+      SFN_STATE_MACHINE_ARN: ${SFN_STATE_MACHINE_ARN:-}
