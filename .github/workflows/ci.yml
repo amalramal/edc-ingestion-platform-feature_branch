@@ -14,6 +14,8 @@ permissions:
 env:
   PYTHON_VERSION: "3.13"
   POETRY_VERSION: "2.3.2"
+  POETRY_VIRTUALENVS_CREATE: "true"
+  POETRY_VIRTUALENVS_IN_PROJECT: "true"
   TF_ROOT: terraform
   MODIN_CPUS: "1"
 
@@ -173,10 +175,11 @@ jobs:
       - name: Install Poetry
         run: pip install "poetry==${{ env.POETRY_VERSION }}"
 
+      - name: Install deps (clean env)
+        run: poetry install --no-interaction --no-ansi
+
       - name: Export requirements
-        run: |
-          poetry self add poetry-plugin-export
-          poetry export --format requirements.txt --output requirements-scan.txt --without-hashes
+        run: poetry export --format requirements.txt --output requirements-scan.txt --without-hashes
 
       - name: Safety check
         run: |
@@ -193,10 +196,11 @@ jobs:
       - name: Install Poetry
         run: pip install "poetry==${{ env.POETRY_VERSION }}"
 
+      - name: Install deps (clean env)
+        run: poetry install --no-interaction --no-ansi
+
       - name: Export requirements
-        run: |
-          poetry self add poetry-plugin-export
-          poetry export --format requirements.txt --output requirements-scan.txt --without-hashes
+        run: poetry export --format requirements.txt --output requirements-scan.txt --without-hashes
 
       - name: pip-audit
         run: |
