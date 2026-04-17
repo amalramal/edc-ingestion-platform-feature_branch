@@ -178,6 +178,9 @@ jobs:
       - name: Install deps (clean env)
         run: poetry install --no-interaction --no-ansi
 
+      - name: Install export plugin 
+        run: poetry self add poetry-plugin-export
+
       - name: Export requirements
         run: poetry export --format requirements.txt --output requirements-scan.txt --without-hashes
 
