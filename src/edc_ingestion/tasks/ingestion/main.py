@@ -159,10 +159,7 @@ def _fetch_raw_chunks(
     if mode == SubjectVisitSourceMode.SFTP_ONLY:
         recs = SFTPIngestor().fetch_csv_files(study_id)
         return (
-            [
-                IngestRawChunk(source_label=r.file_name, df=r.df, data_source=DataSource.SFTP, sftp=r)
-                for r in recs
-            ],
+            [IngestRawChunk(source_label=r.file_name, df=r.df, data_source=DataSource.SFTP, sftp=r) for r in recs],
             DataSource.SFTP,
         )
     if mode == SubjectVisitSourceMode.API_ONLY:
@@ -211,10 +208,7 @@ def _fetch_raw_chunks(
         logger.warning("ingestion_api_first_failed_fallback_sftp", study_id=study_id, error=str(exc))
         recs = SFTPIngestor().fetch_csv_files(study_id)
         return (
-            [
-                IngestRawChunk(source_label=r.file_name, df=r.df, data_source=DataSource.SFTP, sftp=r)
-                for r in recs
-            ],
+            [IngestRawChunk(source_label=r.file_name, df=r.df, data_source=DataSource.SFTP, sftp=r) for r in recs],
             DataSource.SFTP,
         )
 
