@@ -1,0 +1,53 @@
+exclude: ".terraform/"
+repos:
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.100.0 # Get the latest from: https://github.com/antonbabenko/pre-commit-terraform/releases
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_tflint
+        alias: terraform_tflint_init
+        name: tflint init
+        require_serial: true
+        args:
+          - --args=--init
+      - id: terraform_tflint
+        name: tflint
+        require_serial: true
+        exclude: (\.terraform\/.*|examples\/.*)$
+      - id: terraform_docs
+        args:
+          - '--args=--lockfile=false'
+          - '--args=--config=.terraform-docs.yml'
+      - id: terraform_validate
+        exclude: examples
+        require_serial: true
+        args:
+          - --args=-json
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: check-case-conflict
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-executables-have-shebangs
+      - id: check-symlinks
+      - id: check-yaml
+        exclude: kubernetes
+        args:
+          - --unsafe
+      - id: destroyed-symlinks
+      - id: end-of-file-fixer
+      - id: no-commit-to-branch
+      - id: pretty-format-json
+        args:
+          - --autofix
+          - --top-keys=name,Name,rulePriority
+      - id: trailing-whitespace
+        args:
+          - --markdown-linebreak-ext=md
+        exclude: README.md

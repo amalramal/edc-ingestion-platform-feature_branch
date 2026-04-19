@@ -1,0 +1,28 @@
+name: Module Releaser - Dry Run
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dry-run-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Terraform Module Releaser
+        uses: techpivot/terraform-module-releaser@v1
+        id: dry-run-release
+        with:
+          use-ssh-source-format: true
+          disable-wiki: "true"
+          module-path-ignore: "template,template/**,**/examples"

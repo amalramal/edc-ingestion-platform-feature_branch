@@ -1,0 +1,48 @@
+# Terraform
+tfplan
+tfplan.txt
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+*.tfvars
+!*.tfvars.example
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Sensitive documentation (incident reports, security findings)
+docs/clinrun-user-deep-analysis.md
+docs/frankfurt-traffic-analysis.md
+docs/incident-report-*.md
+docs/security-audit-findings-*.md
+docs/security-improvements-backlog.md
+
+# IR scripts with sensitive infrastructure details
+scripts/ir/
+
+# Local/temp files
+*.log
+*.tmp
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+*.pem
+*.key
+
+# Python venv
+**/.venv/
+**/venv/
+
+# Ansible backups (local snapshots, not for version control)
+ansible/backups/
