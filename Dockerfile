@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------------------
 # Build stage — export locked requirements.txt from Poetry
 # ---------------------------------------------------------------------------
-FROM python:3.13.11-slim AS builder
+FROM python:3.13-slim-bookworm AS builder
 
 ENV POETRY_VERSION=2.3.2 \
     POETRY_VIRTUALENVS_CREATE=false \
