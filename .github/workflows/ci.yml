@@ -348,11 +348,9 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-          # wont run because infrastructure_vendor_main is not committed to this repo.
-          # location of terraform-deploy is wrong.
-          # Add folder infrastructure_vendor_main to this repo so ci can touch terraform deploy YAML.
+          # so ci can touch terraform deploy YAML.
     terraform-deploy:
       - name: Terraform Deploy
         needs: [test, lint, terraform-validate]
         if: github.ref == 'refs/heads/main'
-          uses: ./.github/workflows/terraform-deploy.yml
+          uses: ../infrastructure-vendor_main/.github/workflows/terraform-deploy.yml
