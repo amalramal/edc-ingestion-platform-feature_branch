@@ -348,9 +348,11 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-          # so ci can touch terraform deploy YAML.
-    terraform-deploy:
-      - name: Terraform Deploy
-        needs: [test, lint, terraform-validate]
-        if: github.ref == 'refs/heads/main'
-          uses: ../infrastructure-vendor_main/.github/workflows/terraform-deploy-dev.yml
+# so ci can touch terraform deploy YAML.
+# removed deploy job
+# will add in later sprints
+#    terraform-deploy:
+#      - name: Terraform Deploy
+#        needs: [test, lint, terraform-validate]
+#        if: github.ref == 'refs/heads/main'
+#        uses: ../infrastructure-vendor_main/.github/workflows/terraform-deploy-dev.yml
