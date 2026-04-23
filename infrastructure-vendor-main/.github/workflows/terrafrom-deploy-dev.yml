@@ -1,0 +1,50 @@
+name: Terraform Deploy (DEV)
+# workflow_dispatch: is not reusable. cannot be called via uses:
+#                  : signifies Terraform flow is manually setup.
+# to call this from ci (also)
+# workflow_call:
+# now CI will automatically trigger deploy on main
+on:
+  workflow_all:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_ROOT: terraform
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_ROOT }}
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_ROOT }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_ROOT }}
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_ROOT }}
+        run: terraform apply -auto-approve tfplan
