@@ -353,4 +353,4 @@ jobs:
       - name: Terraform Deploy
         needs: [test, lint, terraform-validate]
         if: github.ref == 'refs/heads/main'
-          uses: ../infrastructure-vendor_main/.github/workflows/terraform-deploy.yml
+          uses: ../infrastructure-vendor_main/.github/workflows/terraform-deploy-dev.yml
